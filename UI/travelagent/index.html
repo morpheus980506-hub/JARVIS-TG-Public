@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; frame-src http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https://*.amap.com https://*.autonavi.com http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
+    />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/assets/icon.svg" />
+    <title>JARVIS 旅行助手</title>
+    <style>
+      #boot-status {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: var(--background, #f7f7f5);
+        color: var(--muted-foreground, #6b716d);
+        font:
+          13px system-ui,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div id="boot-status" role="status">正在打开 JARVIS 旅行助手…</div></div>
+    <script type="module" src="/src/renderer/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      :root {
+        --pin: #176b59;
+        --selected: #225dd0;
+        --surface: #fff;
+        --ink: #15251f;
+        --muted: #58675f;
+        --border: #d9e3dd;
+      }
+      html,
+      body,
+      #map {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        font-family: system-ui, sans-serif;
+        user-select: none;
+      }
+      .pin {
+        position: relative;
+        display: block;
+        width: 36px;
+        height: 42px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        --color: var(--pin);
+      }
+      .pin::after {
+        position: absolute;
+        top: 28px;
+        left: 11px;
+        border: 7px solid transparent;
+        border-top: 14px solid var(--color);
+        border-bottom: 0;
+        content: '';
+      }
+      .pin-face {
+        position: absolute;
+        top: 0;
+        left: 2px;
+        box-sizing: border-box;
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 2px solid white;
+        border-radius: 50%;
+        background: var(--color);
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        box-shadow: 0 2px 6px #15251f40;
+      }
+      .pin.selected {
+        --color: var(--selected);
+      }
+      .pin:focus-visible {
+        outline: 3px solid var(--selected);
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      .pin-count {
+        position: absolute;
+        top: -5px;
+        right: -7px;
+        padding: 1px 3px;
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--ink);
+        font-size: 10px;
+        border: 1px solid var(--border);
+      }
+      .popup {
+        box-sizing: border-box;
+        max-width: min(280px, 65vw);
+        max-height: 250px;
+        overflow: auto;
+        padding: 6px;
+        color: #15251f;
+        font-size: 13px;
+        line-height: 1.65;
+        user-select: text;
+      }
+      .popup h3 {
+        margin: 0 0 5px;
+        font-size: 14px;
+      }
+      .popup p {
+        margin: 5px 0;
+        overflow-wrap: anywhere;
+      }
+      .popup small {
+        display: block;
+        margin-bottom: 6px;
+        color: #58675f;
+      }
+      .visit {
+        display: block;
+        width: 100%;
+        margin-top: 5px;
+        padding: 6px;
+        border: 1px solid #d9e3dd;
+        border-radius: 4px;
+        background: #f5f8f6;
+        color: #15251f;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .visit:focus-visible {
+        outline: 2px solid #225dd0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      let initialized = false
+      let map
+      let popup
+      let groups = []
+      let markers = []
+      let labels
+      let apiKey = ''
+      let requestId = ''
+      let parentOrigin = '*'
+      let resizeTimer
+      function report(type, extra = {}) {
+        window.parent.postMessage(
+          { source: 'travel-map', id: requestId, type, ...extra },
+          parentOrigin === 'null' ? '*' : parentOrigin,
+        )
+      }
+      function failure(error) {
+        const text = String(error?.message || error || '地图资源加载失败')
+          .split(apiKey || '\0')
+          .join('[已隐藏密钥]')
+        report('error', { text })
+      }
+      window.addEventListener('error', (event) => failure(event.message))
+      window.addEventListener('unhandledrejection', (event) => failure(event.reason))
+      function fit() {
+        popup?.close()
+        if (markers.length === 1) map.setZoomAndCenter(14, groups[0].coord, true)
+        else if (markers.length > 1) map.setFitView(markers, true, [65, 110, 65, 65], 15)
+      }
+      function selectPlace(id, notify = false) {
+        const groupIndex = groups.findIndex((group) =>
+          group.places.some((place) => place.id === id),
+        )
+        if (groupIndex < 0 || !map) return
+        const group = groups[groupIndex]
+        const place = group.places.find((place) => place.id === id)
+        markers.forEach((marker, index) => {
+          marker.getContent().classList.toggle('selected', index === groupIndex)
+          marker.setzIndex(index === groupIndex ? 200 : 100)
+        })
+        const content = document.createElement('section')
+        content.className = 'popup'
+        const title = document.createElement('h3')
+        title.textContent = `${place.number}. ${place.name}`
+        const time = document.createElement('small')
+        time.textContent = `第 ${place.day} 天 · ${place.date} · ${place.time}`
+        const description = document.createElement('p')
+        description.textContent = place.description || '暂无额外说明'
+        content.append(title, time, description)
+        if (group.places.length > 1) {
+          const note = document.createElement('small')
+          note.textContent = `该坐标共有 ${group.places.length} 条行程记录：`
+          content.append(note)
+          group.places.forEach((other) => {
+            const button = document.createElement('button')
+            button.className = 'visit'
+            button.textContent = `${other.number}. ${other.name} · 第${other.day}天 ${other.time}`
+            button.onclick = () => selectPlace(other.id, true)
+            content.append(button)
+          })
+        }
+        map.setZoomAndCenter(Math.max(map.getZoom(), 14), group.coord, true)
+        popup.setContent(content)
+        popup.open(map, group.coord)
+        if (notify) report('select', { placeId: id })
+      }
+      function draw() {
+        groups.forEach((group) => {
+          const place = group.places[0]
+          const pin = document.createElement('button')
+          pin.type = 'button'
+          pin.className = 'pin'
+          pin.setAttribute(
+            'aria-label',
+            `${place.number}. ${place.name}，第${place.day}天 ${place.time}${group.places.length > 1 ? `，同坐标${group.places.length}条记录` : ''}`,
+          )
+          const face = document.createElement('span')
+          face.className = 'pin-face'
+          face.textContent = String(place.number)
+          pin.append(face)
+          if (group.places.length > 1) {
+            const count = document.createElement('span')
+            count.className = 'pin-count'
+            count.textContent = `+${group.places.length - 1}`
+            pin.append(count)
+          }
+          pin.onclick = (event) => {
+            event.stopPropagation()
+            selectPlace(place.id, true)
+          }
+          const marker = new AMap.Marker({
+            position: group.coord,
+            content: pin,
+            anchor: 'bottom-center',
+            offset: new AMap.Pixel(0, 0),
+            title: place.name,
+          })
+          const label = new AMap.LabelMarker({
+            position: group.coord,
+            rank: groups.length - markers.length,
+            text: {
+              content: `${place.name}${group.places.length > 1 ? ` · ${group.places.length}条记录` : ''}`,
+              direction: 'right',
+              offset: [24, -24],
+              style: {
+                fontSize: 12,
+                fillColor: '#15251f',
+                backgroundColor: '#ffffff',
+                borderColor: '#d9e3dd',
+                borderWidth: 1,
+                padding: [5, 8],
+              },
+            },
+          })
+          label.on('click', () => selectPlace(place.id, true))
+          labels.add(label)
+          marker.on('click', () => selectPlace(place.id, true))
+          map.add(marker)
+          markers.push(marker)
+        })
+        fit()
+      }
+      window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return
+        if (initialized) {
+          if (event.origin !== parentOrigin || event.data?.id !== requestId) return
+          if (event.data.type === 'map:select') selectPlace(event.data.placeId)
+          if (event.data.type === 'map:fit' && map) fit()
+          return
+        }
+        if (event.data?.type !== 'map:init') return
+        initialized = true
+        const { key, proxy, id } = event.data
+        groups = (Array.isArray(event.data.groups) ? event.data.groups : []).filter(
+          (group) =>
+            Array.isArray(group.coord) &&
+            group.coord.length === 2 &&
+            group.coord.every(Number.isFinite) &&
+            Math.abs(group.coord[0]) <= 180 &&
+            Math.abs(group.coord[1]) <= 90 &&
+            Array.isArray(group.places) &&
+            group.places.length,
+        )
+        requestId = id
+        parentOrigin = event.origin
+        apiKey = key
+        window._AMapSecurityConfig = { serviceHost: proxy }
+        const script = document.createElement('script')
+        script.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(key)
+        script.onerror = () => failure('地图脚本加载失败，请检查网络')
+        script.onload = () => {
+          try {
+            map = new AMap.Map('map', {
+              center: [105, 35],
+              zoom: 4,
+              resizeEnable: true,
+              animateEnable: false,
+            })
+            labels = new AMap.LabelsLayer({ zIndex: 120, collision: true, allowCollision: false })
+            map.add(labels)
+            popup = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -42), autoMove: true })
+            map.on('complete', () => report('complete'))
+            draw()
+          } catch (error) {
+            failure(error)
+          }
+        }
+        document.head.append(script)
+      })
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer)
+        resizeTimer = setTimeout(() => {
+          if (map) {
+            map.resize?.()
+            fit()
+          }
+        }, 150)
+      })
+      window.addEventListener('pagehide', () => {
+        clearTimeout(resizeTimer)
+        map?.destroy()
+      })
+    </script>
+  </body>
+</html>

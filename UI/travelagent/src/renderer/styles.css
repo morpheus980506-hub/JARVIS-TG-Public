@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-syntax-key: var(--syntax-key);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-literal: var(--syntax-literal);
+  --color-shell: var(--shell);
+  --color-sidebar: var(--sidebar);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chat-bubble: var(--chat-bubble);
+  --color-chat-bubble-foreground: var(--chat-bubble-foreground);
+  --color-context-system: var(--context-system);
+  --color-budget-price: var(--budget-price);
+  --color-context-tools: var(--context-tools);
+  --color-context-messages: var(--context-messages);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+:root {
+  font-family: Inter, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-synthesis: none;
+  --radius: 0.625rem;
+  --background: #fff;
+  --foreground: #252525;
+  --card: #fff;
+  --card-foreground: #252525;
+  --popover: #fff;
+  --popover-foreground: #252525;
+  --primary: #252525;
+  --primary-foreground: #fff;
+  --secondary: #f4f4f4;
+  --secondary-foreground: #252525;
+  --muted: #f4f4f4;
+  --muted-foreground: #737373;
+  --accent: #ececed;
+  --accent-foreground: #252525;
+  --destructive: #c42b1c;
+  --border: #e8e8e8;
+  --input: #e0e0e0;
+  --ring: #527e70;
+  --shell: #f0f0f0;
+  --sidebar: #f7f7f8;
+  --chat-bubble: #f4f4f4;
+  --chat-bubble-foreground: #252525;
+  --syntax-key: #125a8a;
+  --syntax-string: #28643c;
+  --syntax-number: #8c471a;
+  --syntax-literal: #713f91;
+  --context-system: #92979e;
+  --budget-price: #a63b0a;
+  --context-tools: #8b5cf6;
+  --context-messages: #3b82f6;
+}
+.dark {
+  --syntax-key: #9cdcfe;
+  --syntax-string: #a8d5a2;
+  --syntax-number: #e9b983;
+  --syntax-literal: #c9a5ed;
+  --context-system: #afb3bb;
+  --budget-price: #fb923c;
+  --context-tools: #a78bfa;
+  --context-messages: #4b91f5;
+  color-scheme: dark;
+  --background: #191919;
+  --foreground: #ececec;
+  --card: #202020;
+  --card-foreground: #ececec;
+  --popover: #252525;
+  --popover-foreground: #ececec;
+  --primary: #eee;
+  --primary-foreground: #222;
+  --secondary: #2f2f2f;
+  --secondary-foreground: #ececec;
+  --muted: #2f2f2f;
+  --muted-foreground: #a3a3a3;
+  --accent: #333;
+  --accent-foreground: #ececec;
+  --destructive: #ef7770;
+  --border: #393939;
+  --input: #393939;
+  --ring: #8ab5a5;
+  --shell: #212121;
+  --sidebar: #1b1b1b;
+  --chat-bubble: #1b4277;
+  --chat-bubble-foreground: #f3f6fc;
+}
+@utility chat-column {
+  width: min(48rem, 100% - clamp(2rem, 8%, 4rem));
+  margin-inline: auto;
+}
+@utility chat-enter {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: chat-enter 180ms ease-out both;
+  }
+}
+@keyframes chat-enter {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground select-none;
+    margin: 0;
+  }
+  input,
+  textarea,
+  [contenteditable='true'],
+  [contenteditable='plaintext-only'] {
+    user-select: text;
+  }
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='menuitem'] {
+    user-select: none;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+}
